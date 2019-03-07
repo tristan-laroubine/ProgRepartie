@@ -7,9 +7,7 @@
 #include <time.h>
 #include <stdlib.h>
 
-#define NUM_PORT 50013
-#define BACKLOG 50
-#define NB_CLIENTS 100
+
 
 using namespace std;
 
@@ -21,52 +19,39 @@ void exitErreur(const char * msg) {
 
 int main() {
 
-    int sock_serveur = socket(AF_INET, SOCK_STREAM, 0);
+    int sock_client = socket(AF_INET, SOCK_STREAM, 0);
+
+    cout << "Client lancé"<< endl;
+
+    int etat_connect;
 
     struct sockaddr_in sockaddr_serveur;
-
+    inet_aton("139.124.187.23",&sockaddr_serveur.sin_addr);
     sockaddr_serveur.sin_family = AF_INET;
-    sockaddr_serveur.sin_port = htons(NUM_PORT);
-    sockaddr_serveur.sin_addr.s_addr = htonl(INADDR_ANY);
+    sockaddr_serveur.sin_port = htons(80);
 
-    int yes = 1;
-    if (setsockopt(sock_serveur, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))
-            == -1)
-        exitErreur("setsockopt");
+    socklen_t socklen = sizeof(sockaddr_serveur);
 
-    if (bind(sock_serveur, (struct sockaddr *) &sockaddr_serveur,
-            sizeof(sockaddr_in)) == -1)
-        exitErreur("bind");
 
-    if (listen(sock_serveur, BACKLOG) == -1)
-        exitErreur("listen");
+    if( (etat_connect = connect(sock_client,(struct sockaddr *) &sockaddr_serveur, socklen) )== -1)
+        exitErreur("connect");
 
-    int sock_client;
+    string requete = "GET /tp1.html\n";
+    if (write(sock_client, requete.c_str(), requete.size()) == -1)
+        exitErreur("write");
 
-    char * msg;
-    time_t date;
 
-    cout << "Serveur DayTime lancé  sur le port " << NUM_PORT << endl;
-
-    for (int i = 1; i <= NB_CLIENTS; i++) {
-
-        struct  sockaddr_in sockaddr_client;
-        socklen_t addrlen = sizeof (sockaddr_client);
-        sock_client = accept(sock_serveur, (struct sockaddr *) &sockaddr_client, &addrlen);
-        cout << "sockaddr_client IP: " << inet_ntoa(sockaddr_client.sin_addr) <<" port: " << ntohs( sockaddr_client.sin_port) << " end!" <<endl;
-        cout << "test 2 getpeername : " << getpeername(sock_client,(struct sockaddr *) &sockaddr_client, &addrlen) <<inet_ntoa(sockaddr_client.sin_addr) << " end!" << endl;
-        if (sock_client == -1)
-            exitErreur("accept");
-
-        date = time(NULL);
-        msg = ctime(&date);
-
-        if (write(sock_client, msg, strlen(msg)) == -1)
-            exitErreur("write");
-
-        close(sock_client);
-
+    char msg [5];
+    int taillemsg=1;
+    while(taillemsg != 0){
+    if ((taillemsg = read(sock_client, msg, sizeof (msg))) == -1)
+        exitErreur("read");
+    for(unsigned i = 0; i < taillemsg; ++i)
+        cout << msg[i];
     }
-    close(sock_serveur);
+    close(sock_client);
+
+    cout << "fin " << endl;
+
     return 0;
 }
